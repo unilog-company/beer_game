@@ -112,7 +112,7 @@ export function GameBoard() {
   const timerCritical = isOrdering && orderTimeRemaining <= 5;
 
   return (
-    <div className="min-h-screen flex flex-col relative">
+    <div className="min-h-screen w-full flex flex-col relative overflow-x-hidden">
       {/* Week Transition Banner */}
       <AnimatePresence>
         {showWeekBanner && (
@@ -302,8 +302,8 @@ export function GameBoard() {
       <div className="flex-1 max-w-[1400px] mx-auto w-full px-3 py-3 md:px-6 md:py-4 flex flex-col gap-4 overflow-y-auto">
         <SupplyChainViz game={game} myRole={myRole} aiThinking={aiThinking} players={room.players} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {ROLE_ORDER.map((role) => {
               const node = game.nodes[role];
               const isMe = role === myRole;
@@ -427,7 +427,7 @@ export function GameBoard() {
           {/* Order panel */}
           <motion.div
             layout
-            className={`rounded-xl p-5 h-fit lg:sticky lg:top-4 transition-all duration-300 ${
+            className={`rounded-xl p-5 h-fit xl:sticky xl:top-4 transition-all duration-300 ${
               isOrdering && !hasSubmitted ? 'glass border-teal-500/40 glow-teal' : 'glass'
             }`}
           >
@@ -582,7 +582,7 @@ export function GameBoard() {
 
         {/* Charts */}
         {game.history.length > 0 && (
-          <div className="glass rounded-xl p-5">
+          <div className="glass rounded-xl p-5 overflow-hidden">
             <div className="flex items-center gap-3 mb-4">
               {[
                 { key: 'cost' as const, icon: <DollarSign size={14} />, label: 'Costs', active: activeTab === 'cost' },
