@@ -300,7 +300,7 @@ export function GameBoard() {
 
       {/* Main content */}
       <div className="flex-1 max-w-[1400px] mx-auto w-full px-3 py-3 md:px-6 md:py-4 flex flex-col gap-4 overflow-y-auto">
-        <SupplyChainViz game={game} myRole={myRole} aiThinking={aiThinking} />
+        <SupplyChainViz game={game} myRole={myRole} aiThinking={aiThinking} players={room.players} />
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -343,11 +343,20 @@ export function GameBoard() {
                     <div className={`${isMe ? 'text-teal-400' : isThinking ? 'text-accent-amber' : 'text-white/35'}`}>
                       <RoleIcon role={role} size={16} />
                     </div>
-                    <h3 className={`text-xs font-mono uppercase tracking-wider font-semibold truncate ${
-                      isMe ? 'text-teal-400' : 'text-white/60'
-                    }`}>
-                      {ROLE_LABELS[role]}
-                    </h3>
+                    <div className="min-w-0 flex-1">
+                      <h3 className={`text-xs font-mono uppercase tracking-wider font-semibold truncate ${
+                        isMe ? 'text-teal-400' : 'text-white/60'
+                      }`}>
+                        {ROLE_LABELS[role]}
+                      </h3>
+                      {playerInfo && (
+                        <div className={`text-[10px] truncate ${
+                          isMe ? 'text-teal-400/60' : playerInfo.isAI ? 'text-accent-amber/50' : 'text-white/35'
+                        }`}>
+                          {playerInfo.isAI ? '🤖 Bot' : playerInfo.name}
+                        </div>
+                      )}
+                    </div>
                     {isMe ? (
                       <span className="text-[10px] font-mono text-teal-400 uppercase bg-teal-500/15 px-1.5 py-0.5 rounded font-bold ml-auto shrink-0">
                         You

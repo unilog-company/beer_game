@@ -1,12 +1,13 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROLE_ORDER, ROLE_LABELS } from '@shared/constants';
-import type { GameState, PlayerRole } from '@shared/types';
+import type { GameState, PlayerRole, PlayerInfo } from '@shared/types';
 import { Lock, User } from './Icons';
 
 interface Props {
   game: GameState;
   myRole: PlayerRole | null;
   aiThinking?: PlayerRole[];
+  players?: PlayerInfo[];
 }
 
 const NODE_COLORS: Record<PlayerRole, string> = {
@@ -16,7 +17,7 @@ const NODE_COLORS: Record<PlayerRole, string> = {
   retailer: '#7ed321',
 };
 
-export function SupplyChainViz({ game, myRole, aiThinking = [] }: Props) {
+export function SupplyChainViz({ game, myRole, aiThinking = [], players = [] }: Props) {
   const reversed = [...ROLE_ORDER].reverse();
 
   return (
@@ -107,6 +108,17 @@ export function SupplyChainViz({ game, myRole, aiThinking = [] }: Props) {
                   <div className="text-[10px] font-mono text-white/45 uppercase tracking-wider truncate font-medium">
                     {ROLE_LABELS[role]}
                   </div>
+                  {(() => {
+                    const p = players.find((pl) => pl.role === role);
+                    if (!p) return null;
+                    return (
+                      <div className={`text-[9px] truncate ${
+                        role === myRole ? 'text-teal-400/50' : p.isAI ? 'text-accent-amber/40' : 'text-white/25'
+                      }`}>
+                        {p.isAI ? 'Bot' : p.name}
+                      </div>
+                    );
+                  })()}
                   {isHidden ? (
                     <div className="text-white/12 mt-1 flex justify-center">
                       <Lock size={18} />
