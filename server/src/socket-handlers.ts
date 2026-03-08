@@ -119,7 +119,7 @@ function autoSubmitMissing(io: Server, room: ReturnType<typeof getRoom>): void {
 }
 
 function checkAllOrdersIn(io: Server, room: ReturnType<typeof getRoom>): void {
-  if (!room?.game) return;
+  if (!room?.game || room.game.phase !== 'ordering') return;
   const allRolesAssigned = ROLE_ORDER.every((role) =>
     room.pendingOrders.has(role)
   );
@@ -129,7 +129,7 @@ function checkAllOrdersIn(io: Server, room: ReturnType<typeof getRoom>): void {
 }
 
 function processOrders(io: Server, room: ReturnType<typeof getRoom>): void {
-  if (!room?.game) return;
+  if (!room?.game || room.game.phase !== 'ordering') return;
 
   if (room.tickInterval) {
     clearInterval(room.tickInterval);
@@ -152,14 +152,16 @@ function processOrders(io: Server, room: ReturnType<typeof getRoom>): void {
   }
 
   room.game = advanceTurn(room.game, orders);
-
-  broadcastGameState(io, room);
+  room.pendingOrders = new Map();
 
   if (room.game.phase === 'finished') {
+    broadcastGameState(io, room);
     io.to(room.state.code).emit('game-over', room.game);
     room.state.gamePhase = 'finished';
     broadcastRoomState(io, room.state.code);
   } else {
+    room.game.phase = 'processing';
+    broadcastGameState(io, room);
     setTimeout(() => {
       startOrderPhase(io, room);
     }, 1500);
