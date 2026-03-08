@@ -55,13 +55,33 @@ function startOrderPhase(io: Server, room: ReturnType<typeof getRoom>): void {
   room.pendingOrders = new Map();
   room.orderTimeRemaining = ORDER_TIMEOUT_SECONDS;
 
-  // Submit AI orders immediately
-  for (const player of room.state.players) {
-    if (player.isAI && player.role) {
-      const aiOrder = getAIOrder(room.game.nodes[player.role], room.game.config);
-      room.pendingOrders.set(player.role, aiOrder);
-      room.game.ordersSubmitted.push(player.role);
-    }
+  if (room.aiTimers) {
+    for (const t of room.aiTimers) clearTimeout(t);
+  }
+  room.aiTimers = [];
+
+  const aiPlayers = room.state.players.filter((p) => p.isAI && p.role);
+  const aiRoles = aiPlayers.map((p) => p.role!);
+
+  if (aiRoles.length > 0) {
+    io.to(code).emit('ai-thinking', { roles: aiRoles });
+  }
+
+  for (const player of aiPlayers) {
+    const role = player.role!;
+    const delay = 2000 + Math.random() * 5000;
+    const timer = setTimeout(() => {
+      if (!room.game || room.game.phase !== 'ordering') return;
+      if (room.pendingOrders.has(role)) return;
+
+      const aiOrder = getAIOrder(room.game.nodes[role], room.game.config);
+      room.pendingOrders.set(role, aiOrder);
+      room.game.ordersSubmitted.push(role);
+      io.to(code).emit('order-submitted', { role });
+
+      checkAllOrdersIn(io, room);
+    }, delay);
+    room.aiTimers.push(timer);
   }
 
   broadcastGameState(io, room);
@@ -118,6 +138,10 @@ function processOrders(io: Server, room: ReturnType<typeof getRoom>): void {
   if (room.orderTimer) {
     clearTimeout(room.orderTimer);
     room.orderTimer = null;
+  }
+  if (room.aiTimers) {
+    for (const t of room.aiTimers) clearTimeout(t);
+    room.aiTimers = [];
   }
 
   room.game.phase = 'processing';

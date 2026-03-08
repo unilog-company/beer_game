@@ -100,5 +100,6 @@ export interface ServerToClientEvents {
   'player-joined': (data: { playerName: string }) => void;
   'player-left': (data: { playerName: string }) => void;
   'order-submitted': (data: { role: PlayerRole }) => void;
+  'ai-thinking': (data: { roles: PlayerRole[] }) => void;
   'rejoined': (data: { role: PlayerRole | null; gamePhase: 'lobby' | 'playing' | 'finished' }) => void;
 }

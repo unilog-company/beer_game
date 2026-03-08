@@ -15,6 +15,7 @@ interface Room {
   tickInterval: ReturnType<typeof setInterval> | null;
   orderTimeRemaining: number;
   pendingOrders: Map<PlayerRole, number>;
+  aiTimers: ReturnType<typeof setTimeout>[];
 }
 
 const rooms = new Map<string, Room>();
@@ -51,6 +52,7 @@ export function createRoom(playerId: string, playerName: string): Room {
     tickInterval: null,
     orderTimeRemaining: 0,
     pendingOrders: new Map(),
+    aiTimers: [],
   };
   rooms.set(code, room);
   return room;
@@ -255,6 +257,9 @@ function cleanupRoom(code: string): void {
   if (room) {
     if (room.orderTimer) clearTimeout(room.orderTimer);
     if (room.tickInterval) clearInterval(room.tickInterval);
+    if (room.aiTimers) {
+      for (const t of room.aiTimers) clearTimeout(t);
+    }
     rooms.delete(code);
   }
 }

@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ROLE_ORDER, ROLE_LABELS } from '@shared/constants';
 import type { GameState, PlayerRole } from '@shared/types';
 import { Lock, User } from './Icons';
@@ -6,6 +6,7 @@ import { Lock, User } from './Icons';
 interface Props {
   game: GameState;
   myRole: PlayerRole | null;
+  aiThinking?: PlayerRole[];
 }
 
 const NODE_COLORS: Record<PlayerRole, string> = {
@@ -15,7 +16,7 @@ const NODE_COLORS: Record<PlayerRole, string> = {
   retailer: '#7ed321',
 };
 
-export function SupplyChainViz({ game, myRole }: Props) {
+export function SupplyChainViz({ game, myRole, aiThinking = [] }: Props) {
   const reversed = [...ROLE_ORDER].reverse();
 
   return (
@@ -58,6 +59,8 @@ export function SupplyChainViz({ game, myRole }: Props) {
           const isMe = role === myRole;
           const isHidden = node.inventory < 0;
           const invLevel = isHidden ? 0 : Math.min(node.inventory / 30, 1);
+          const isAiThinking = aiThinking.includes(role);
+          const hasSubmitted = game.ordersSubmitted.includes(role);
 
           return (
             <div key={role} className="flex items-center flex-1 min-w-0">
@@ -66,7 +69,9 @@ export function SupplyChainViz({ game, myRole }: Props) {
                 className={`relative shrink-0 w-full rounded-xl p-2 md:p-3 border transition-all duration-500 ${
                   isMe
                     ? 'bg-navy-800/80 border-teal-500/40'
-                    : 'bg-navy-800/30 border-white/8'
+                    : isAiThinking && !hasSubmitted
+                      ? 'bg-navy-800/50 border-accent-amber/30'
+                      : 'bg-navy-800/30 border-white/8'
                 }`}
               >
                 <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl overflow-hidden">
@@ -85,6 +90,18 @@ export function SupplyChainViz({ game, myRole }: Props) {
                     transition={{ duration: 2, repeat: Infinity }}
                   />
                 )}
+
+                <AnimatePresence>
+                  {isAiThinking && !hasSubmitted && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute -inset-px rounded-xl border border-accent-amber/25"
+                      style={{ animation: 'pulse 1.5s ease-in-out infinite' }}
+                    />
+                  )}
+                </AnimatePresence>
 
                 <div className="text-center">
                   <div className="text-[10px] font-mono text-white/45 uppercase tracking-wider truncate font-medium">
@@ -109,6 +126,27 @@ export function SupplyChainViz({ game, myRole }: Props) {
                       )}
                     </motion.div>
                   )}
+
+                  <AnimatePresence mode="wait">
+                    {isAiThinking && !hasSubmitted && game.phase === 'ordering' && (
+                      <motion.div
+                        key="thinking"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="flex items-center justify-center gap-1 mt-1"
+                      >
+                        {[0, 1, 2].map((j) => (
+                          <motion.div
+                            key={j}
+                            className="w-1 h-1 rounded-full bg-accent-amber"
+                            animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
+                            transition={{ duration: 0.8, repeat: Infinity, delay: j * 0.15, ease: 'easeInOut' }}
+                          />
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </motion.div>
 

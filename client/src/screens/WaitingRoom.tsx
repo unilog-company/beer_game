@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store';
 import { ROLE_ORDER, ROLE_LABELS } from '@shared/constants';
@@ -269,26 +270,26 @@ export function WaitingRoom() {
               onClick={fillAI}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
-              className="px-5 py-3 md:px-8 md:py-4 w-full sm:w-auto justify-center rounded-xl text-base font-medium text-white/70
+              className="px-8 py-4 md:px-12 md:py-5 w-full sm:w-auto justify-center rounded-xl text-lg font-semibold text-white/70
                 border border-white/15 hover:border-white/25 hover:text-white/90
-                hover:bg-white/5 transition-all flex items-center gap-2.5"
+                hover:bg-white/5 transition-all flex items-center gap-3"
             >
-              <Bot size={18} /> Fill with AI
+              <Bot size={22} /> Play with AI
             </motion.button>
             <motion.button
               onClick={() => { startGame(); playLaunch(); }}
               disabled={!allRolesAssigned}
               whileHover={allRolesAssigned ? { scale: 1.03 } : undefined}
               whileTap={allRolesAssigned ? { scale: 0.97 } : undefined}
-              className={`px-8 py-3 md:px-12 md:py-4 w-full sm:w-auto flex items-center justify-center rounded-xl text-base font-bold
+              className={`px-10 py-4 md:px-14 md:py-5 w-full sm:w-auto flex items-center justify-center rounded-xl text-lg font-bold
                 transition-all relative overflow-hidden
                 ${allRolesAssigned
                   ? 'text-navy-950 bg-gradient-to-r from-teal-500 to-lime-500 shadow-[0_0_30px_rgba(0,201,177,0.4)]'
                   : 'text-white/30 bg-white/5 cursor-not-allowed'
                 }`}
             >
-              <span className="relative z-10 flex items-center gap-2">
-                <Rocket size={18} /> Launch Game
+              <span className="relative z-10 flex items-center gap-3">
+                <Rocket size={22} /> Launch Game
               </span>
               {allRolesAssigned && (
                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0
@@ -317,6 +318,21 @@ function ConfigInput({ label, value, min, max, onChange, icon }: {
   label: string; value: number; min: number; max: number;
   onChange: (v: number) => void; icon: React.ReactNode;
 }) {
+  const [localValue, setLocalValue] = useState(String(value));
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setLocalValue(String(value));
+  }, [value, focused]);
+
+  const commit = () => {
+    const parsed = parseInt(localValue);
+    if (isNaN(parsed) || parsed < min) onChange(min);
+    else if (parsed > max) onChange(max);
+    else onChange(parsed);
+    setFocused(false);
+  };
+
   return (
     <div>
       <label className="flex items-center text-sm text-white/50 font-mono"
@@ -325,8 +341,11 @@ function ConfigInput({ label, value, min, max, onChange, icon }: {
       </label>
       <input
         type="number"
-        value={value}
-        onChange={(e) => onChange(parseInt(e.target.value) || value)}
+        value={localValue}
+        onChange={(e) => setLocalValue(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === 'Enter') commit(); }}
         min={min}
         max={max}
         className="w-full bg-navy-900/80 border border-white/15 rounded-lg px-4 py-3

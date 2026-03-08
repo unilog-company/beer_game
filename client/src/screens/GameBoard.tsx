@@ -19,17 +19,22 @@ export function GameBoard() {
   const room = useGameStore((s) => s.room);
   const orderTimeRemaining = useGameStore((s) => s.orderTimeRemaining);
   const submitOrder = useGameStore((s) => s.submitOrder);
+  const aiThinking = useGameStore((s) => s.aiThinking);
 
   const [orderAmount, setOrderAmount] = useState(4);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [activeTab, setActiveTab] = useState<'cost' | 'orders'>('cost');
   const [showWeekBanner, setShowWeekBanner] = useState(false);
   const [showOrderCelebration, setShowOrderCelebration] = useState(false);
+  const [recentlySubmitted, setRecentlySubmitted] = useState<Set<PlayerRole>>(new Set());
   const prevWeekRef = useRef(0);
+  const prevSubmittedRef = useRef<PlayerRole[]>([]);
 
   useEffect(() => {
     if (game?.phase === 'ordering') {
       setHasSubmitted(false);
+      setRecentlySubmitted(new Set());
+      prevSubmittedRef.current = [];
       if (game.currentWeek !== prevWeekRef.current) {
         prevWeekRef.current = game.currentWeek;
         setShowWeekBanner(true);
@@ -38,6 +43,28 @@ export function GameBoard() {
       }
     }
   }, [game?.currentWeek, game?.phase]);
+
+  useEffect(() => {
+    if (!game) return;
+    const prev = prevSubmittedRef.current;
+    const curr = game.ordersSubmitted;
+    const newlySubmitted = curr.filter((r) => !prev.includes(r) && r !== myRole);
+    if (newlySubmitted.length > 0) {
+      setRecentlySubmitted((s) => {
+        const next = new Set(s);
+        newlySubmitted.forEach((r) => next.add(r));
+        return next;
+      });
+      setTimeout(() => {
+        setRecentlySubmitted((s) => {
+          const next = new Set(s);
+          newlySubmitted.forEach((r) => next.delete(r));
+          return next;
+        });
+      }, 2000);
+    }
+    prevSubmittedRef.current = curr;
+  }, [game?.ordersSubmitted, game, myRole]);
 
   const handleSubmit = () => {
     if (hasSubmitted || !game || game.phase !== 'ordering') return;
@@ -273,7 +300,7 @@ export function GameBoard() {
 
       {/* Main content */}
       <div className="flex-1 max-w-[1400px] mx-auto w-full px-3 py-3 md:px-6 md:py-4 flex flex-col gap-4 overflow-y-auto">
-        <SupplyChainViz game={game} myRole={myRole} />
+        <SupplyChainViz game={game} myRole={myRole} aiThinking={aiThinking} />
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -281,17 +308,39 @@ export function GameBoard() {
               const node = game.nodes[role];
               const isMe = role === myRole;
               const isHidden = node.inventory < 0;
+              const isThinking = aiThinking.includes(role) && !game.ordersSubmitted.includes(role);
+              const justSubmitted = recentlySubmitted.has(role);
+              const playerInfo = room.players.find((p) => p.role === role);
+              const isAI = playerInfo?.isAI ?? false;
 
               return (
                 <motion.div
                   key={role}
                   layout
-                  className={`rounded-xl p-4 transition-all duration-300 ${
-                    isMe ? 'glass border-teal-500/30 glow-teal' : 'glass'
+                  className={`rounded-xl p-4 transition-all duration-300 relative overflow-hidden ${
+                    isMe
+                      ? 'glass border-teal-500/30 glow-teal'
+                      : isThinking
+                        ? 'glass border-accent-amber/30'
+                        : justSubmitted
+                          ? 'glass border-teal-400/30'
+                          : 'glass'
                   }`}
                 >
+                  <AnimatePresence>
+                    {justSubmitted && (
+                      <motion.div
+                        initial={{ opacity: 0.6 }}
+                        animate={{ opacity: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 1.5 }}
+                        className="absolute inset-0 bg-teal-500/8 pointer-events-none rounded-xl"
+                      />
+                    )}
+                  </AnimatePresence>
+
                   <div className="flex items-center gap-2 mb-3">
-                    <div className={`${isMe ? 'text-teal-400' : 'text-white/35'}`}>
+                    <div className={`${isMe ? 'text-teal-400' : isThinking ? 'text-accent-amber' : 'text-white/35'}`}>
                       <RoleIcon role={role} size={16} />
                     </div>
                     <h3 className={`text-xs font-mono uppercase tracking-wider font-semibold truncate ${
@@ -299,11 +348,44 @@ export function GameBoard() {
                     }`}>
                       {ROLE_LABELS[role]}
                     </h3>
-                    {isMe && (
+                    {isMe ? (
                       <span className="text-[10px] font-mono text-teal-400 uppercase bg-teal-500/15 px-1.5 py-0.5 rounded font-bold ml-auto shrink-0">
                         You
                       </span>
-                    )}
+                    ) : isAI && isOrdering ? (
+                      <span className="ml-auto shrink-0">
+                        <AnimatePresence mode="wait">
+                          {isThinking ? (
+                            <motion.span
+                              key="thinking"
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.8 }}
+                              className="flex items-center gap-1 text-[10px] font-mono text-accent-amber uppercase bg-accent-amber/10 px-1.5 py-0.5 rounded font-bold"
+                            >
+                              {[0, 1, 2].map((j) => (
+                                <motion.span
+                                  key={j}
+                                  className="inline-block w-1 h-1 rounded-full bg-accent-amber"
+                                  animate={{ opacity: [0.3, 1, 0.3] }}
+                                  transition={{ duration: 0.8, repeat: Infinity, delay: j * 0.2 }}
+                                />
+                              ))}
+                            </motion.span>
+                          ) : game.ordersSubmitted.includes(role) ? (
+                            <motion.span
+                              key="done"
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.8 }}
+                              className="text-[10px] font-mono text-teal-400/70 uppercase bg-teal-500/10 px-1.5 py-0.5 rounded font-bold flex items-center gap-1"
+                            >
+                              <Check size={10} /> Done
+                            </motion.span>
+                          ) : null}
+                        </AnimatePresence>
+                      </span>
+                    ) : null}
                   </div>
 
                   {isHidden ? (
@@ -450,18 +532,35 @@ export function GameBoard() {
                     {ROLE_ORDER.map((role) => {
                       const submitted = game.ordersSubmitted.includes(role);
                       const playerInfo = room.players.find((p) => p.role === role);
+                      const isThinking = aiThinking.includes(role);
                       return (
                         <div key={role} className="flex items-center gap-2 text-xs font-mono justify-center">
-                          <motion.div
-                            animate={submitted ? { scale: [1, 1.3, 1] } : {}}
-                            className={`w-2 h-2 rounded-full transition-colors ${
-                              submitted ? 'bg-teal-400' : 'bg-white/15'
-                            }`}
-                          />
-                          <span className={submitted ? 'text-white/60' : 'text-white/25'}>
+                          {isThinking && !submitted ? (
+                            <div className="flex gap-[3px] items-center w-2 h-2">
+                              {[0, 1, 2].map((i) => (
+                                <motion.div
+                                  key={i}
+                                  className="w-[3px] h-[3px] rounded-full bg-accent-amber"
+                                  animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
+                                  transition={{ duration: 1, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }}
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <motion.div
+                              animate={submitted ? { scale: [1, 1.3, 1] } : {}}
+                              className={`w-2 h-2 rounded-full transition-colors ${
+                                submitted ? 'bg-teal-400' : 'bg-white/15'
+                              }`}
+                            />
+                          )}
+                          <span className={submitted ? 'text-white/60' : isThinking ? 'text-accent-amber/80' : 'text-white/25'}>
                             {playerInfo?.name ?? ROLE_LABELS[role]}
                           </span>
                           {submitted && <Check size={12} className="text-teal-400/50" />}
+                          {isThinking && !submitted && (
+                            <span className="text-accent-amber/60 text-[10px]">thinking...</span>
+                          )}
                         </div>
                       );
                     })}

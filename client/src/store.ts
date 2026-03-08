@@ -36,6 +36,7 @@ interface GameStore {
   connected: boolean;
   error: string | null;
   openRooms: RoomSummary[];
+  aiThinking: PlayerRole[];
 
   setScreen: (screen: Screen) => void;
   setPlayerName: (name: string) => void;
@@ -63,6 +64,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   connected: false,
   error: null,
   openRooms: [],
+  aiThinking: [],
 
   setScreen: (screen) => set({ screen }),
   setPlayerName: (playerName) => set({ playerName }),
@@ -186,7 +188,7 @@ export function initSocketListeners(): void {
 
   socket.on('game-over', (gameState) => {
     saveSession(null);
-    store.setState({ game: gameState, screen: 'results' });
+    store.setState({ game: gameState, screen: 'results', aiThinking: [] });
   });
 
   socket.on('error', ({ message }) => {
@@ -198,14 +200,20 @@ export function initSocketListeners(): void {
     store.setState({ openRooms: rooms });
   });
 
+  socket.on('ai-thinking', ({ roles }) => {
+    store.setState({ aiThinking: roles });
+  });
+
   socket.on('order-submitted', ({ role }) => {
-    const game = store.getState().game;
+    const state = store.getState();
+    const game = state.game;
     if (game && !game.ordersSubmitted.includes(role)) {
       store.setState({
         game: {
           ...game,
           ordersSubmitted: [...game.ordersSubmitted, role],
         },
+        aiThinking: state.aiThinking.filter((r) => r !== role),
       });
     }
   });
