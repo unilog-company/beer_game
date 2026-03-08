@@ -6,7 +6,7 @@ import type { PlayerRole } from '@shared/types';
 import { socket } from '../socket';
 import {
   RoleIcon, ChevronLeft, Bot, Rocket, Plus, Calendar,
-  Package, TrendingUp, Zap, Settings,
+  Package, TrendingUp, Zap, Settings, DoorOpen,
 } from '../components/Icons';
 import { playClick, playLaunch } from '../lib/sounds';
 
@@ -31,7 +31,9 @@ export function WaitingRoom() {
   const fillAI = useGameStore((s) => s.fillAI);
   const startGame = useGameStore((s) => s.startGame);
   const leaveRoom = useGameStore((s) => s.leaveRoom);
+  const closeRoomAction = useGameStore((s) => s.closeRoom);
   const updateConfig = useGameStore((s) => s.updateConfig);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
   if (!room) return null;
 
@@ -53,14 +55,26 @@ export function WaitingRoom() {
         className="flex items-center justify-between w-full max-w-4xl"
         style={{ marginBottom: 40 }}
       >
-        <button
-          onClick={leaveRoom}
-          className="text-white/50 hover:text-white/80 text-base transition-colors
-            flex items-center gap-1.5 group"
-        >
-          <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-          Leave
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={leaveRoom}
+            className="text-white/50 hover:text-white/80 text-base transition-colors
+              flex items-center gap-1.5 group"
+          >
+            <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+            Leave
+          </button>
+          {isHost && (
+            <button
+              onClick={() => setShowCloseConfirm(true)}
+              className="text-white/30 hover:text-accent-red text-sm transition-colors
+                flex items-center gap-1.5"
+            >
+              <DoorOpen size={16} />
+              Close Room
+            </button>
+          )}
+        </div>
 
         <div className="text-center hidden md:block">
           <img src="/logo.png" alt="Unilog" className="h-10 mx-auto mb-1" />
@@ -310,6 +324,48 @@ export function WaitingRoom() {
           {room.players.filter((p) => !p.isAI).length} human player(s) connected
         </span>
       </motion.div>
+
+      <AnimatePresence>
+        {showCloseConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+            onClick={() => setShowCloseConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass rounded-2xl p-8 max-w-sm w-full text-center border border-accent-red/20"
+            >
+              <DoorOpen size={36} className="text-accent-red mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-white mb-2">Close Room?</h3>
+              <p className="text-sm text-white/50 mb-6">
+                This will remove all players and shut down the room. This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCloseConfirm(false)}
+                  className="flex-1 px-4 py-3 rounded-xl text-sm font-medium text-white/70
+                    border border-white/15 hover:border-white/25 hover:text-white transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { closeRoomAction(); setShowCloseConfirm(false); }}
+                  className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-white
+                    bg-accent-red/80 hover:bg-accent-red transition-all"
+                >
+                  Close Room
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

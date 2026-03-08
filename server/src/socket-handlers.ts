@@ -20,6 +20,7 @@ import {
   findRoomByPlayer,
   getRoom,
   listOpenRooms,
+  closeRoom,
 } from './rooms.js';
 import { advanceTurn, getAIOrder, getVisibleState } from './game-engine.js';
 
@@ -287,6 +288,19 @@ export function registerSocketHandlers(
       io.to(currentRoomCode).emit('order-submitted', { role: player.role });
 
       checkAllOrdersIn(io, room);
+    });
+
+    socket.on('close-room', () => {
+      if (!currentRoomCode) return;
+      const playerIds = closeRoom(currentRoomCode, socket.id);
+      if (!playerIds) return;
+
+      io.to(currentRoomCode).emit('room-closed');
+      for (const pid of playerIds) {
+        io.sockets.sockets.get(pid)?.leave(currentRoomCode);
+      }
+      io.emit('room-list', listOpenRooms());
+      currentRoomCode = null;
     });
 
     socket.on('leave-room', () => {

@@ -86,6 +86,7 @@ export interface ClientToServerEvents {
   'submit-order': (data: { amount: number }) => void;
   'fill-ai': () => void;
   'leave-room': () => void;
+  'close-room': () => void;
 }
 
 export interface ServerToClientEvents {
@@ -101,5 +102,6 @@ export interface ServerToClientEvents {
   'player-left': (data: { playerName: string }) => void;
   'order-submitted': (data: { role: PlayerRole }) => void;
   'ai-thinking': (data: { roles: PlayerRole[] }) => void;
+  'room-closed': () => void;
   'rejoined': (data: { role: PlayerRole | null; gamePhase: 'lobby' | 'playing' | 'finished' }) => void;
 }

@@ -44,6 +44,7 @@ import {
   VolumeX,
   HelpCircle,
   X,
+  DoorOpen,
   type LucideProps,
 } from 'lucide-react';
 const ROLE_ICON_MAP: Record<string, typeof Store> = {
@@ -104,4 +105,5 @@ export {
   VolumeX,
   HelpCircle,
   X,
+  DoorOpen,
 };

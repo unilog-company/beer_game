@@ -51,6 +51,7 @@ interface GameStore {
   startGame: () => void;
   submitOrder: (amount: number) => void;
   leaveRoom: () => void;
+  closeRoom: () => void;
   refreshRooms: () => void;
 }
 
@@ -103,6 +104,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   leaveRoom: () => {
     socket.emit('leave-room');
+    saveSession(null);
+    set({ screen: 'lobby', room: null, game: null, myRole: null });
+  },
+
+  closeRoom: () => {
+    socket.emit('close-room');
     saveSession(null);
     set({ screen: 'lobby', room: null, game: null, myRole: null });
   },
@@ -184,6 +191,19 @@ export function initSocketListeners(): void {
 
   socket.on('timer-tick', ({ timeRemaining }) => {
     store.setState({ orderTimeRemaining: timeRemaining });
+  });
+
+  socket.on('room-closed', () => {
+    saveSession(null);
+    store.setState({
+      screen: 'lobby',
+      room: null,
+      game: null,
+      myRole: null,
+      aiThinking: [],
+      error: 'The room was closed by the host',
+    });
+    setTimeout(() => store.setState({ error: null }), 4000);
   });
 
   socket.on('game-over', (gameState) => {

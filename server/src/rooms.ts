@@ -264,6 +264,21 @@ function cleanupRoom(code: string): void {
   }
 }
 
+export function closeRoom(code: string, playerId: string): string[] | null {
+  const room = rooms.get(code);
+  if (!room) return null;
+
+  const player = room.state.players.find((p) => p.id === playerId);
+  if (!player?.isHost) return null;
+
+  const playerIds = room.state.players
+    .filter((p) => !p.isAI)
+    .map((p) => p.id);
+
+  cleanupRoom(code);
+  return playerIds;
+}
+
 export function deleteRoom(code: string): void {
   cleanupRoom(code);
 }
